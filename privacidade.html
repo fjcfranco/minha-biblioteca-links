@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Política de Privacidade — Minha Biblioteca de Links</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1b2b43;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:800px;margin:44px auto;padding:34px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 6px 28px #1f3a5410}h1{font-size:clamp(25px,4vw,34px);margin:0 0 8px}h2{font-size:19px;margin-top:30px}p,li{line-height:1.75}a{color:#2159dc}small{color:#66768d}.back{display:inline-block;margin-bottom:26px;font-weight:600}@media(max-width:850px){main{margin:0;padding:24px 20px;border-radius:0;border:0}}
+</style>
+</head>
+<body><main>
+<a class="back" href="./">← Voltar à Minha Biblioteca de Links</a>
+<h1>Política de Privacidade</h1>
+<p><small>Minha Biblioteca de Links · Atualizada em 19 de outubro de 2026</small></p>
+<p>Minha Biblioteca de Links é um aplicativo web para uso pessoal que permite cadastrar e organizar endereços de páginas da internet (URLs), descrições e tags, com sincronização opcional pelo Google Drive.</p>
+<h2>1. Dados tratados</h2>
+<p>O aplicativo trata os registros inseridos pelo usuário, incluindo URLs, descrições, tags e informações técnicas necessárias à sincronização, como identificadores e datas de alteração. Também utiliza um identificador público do cliente OAuth e informações de autorização necessárias à conexão com o Google Drive.</p>
+<h2>2. Como os dados são utilizados</h2>
+<p>Os dados são utilizados exclusivamente para apresentar, pesquisar, editar, excluir, exportar e sincronizar os registros da biblioteca. Não há finalidade publicitária nem venda dos dados.</p>
+<h2>3. Armazenamento</h2>
+<p>Os registros são guardados localmente no navegador, por meio do IndexedDB. Quando o usuário autoriza a sincronização, o aplicativo cria ou atualiza o arquivo <strong>biblioteca-links.json</strong> no Google Drive da conta autorizada. O próprio Google fornece a infraestrutura para armazenamento do arquivo na nuvem.</p>
+<p>O identificador do cliente OAuth e o identificador do arquivo sincronizado podem ser armazenados no navegador. O aplicativo não foi projetado para armazenar tokens de acesso OAuth permanentemente.</p>
+<h2>4. Acesso ao Google Drive</h2>
+<p>O aplicativo solicita o escopo <code>https://www.googleapis.com/auth/drive.file</code> para criar, localizar, ler e atualizar os arquivos aos quais ele tem acesso no Google Drive. O objetivo é exclusivamente sincronizar e recuperar os registros da biblioteca. O aplicativo não solicita acesso irrestrito a todo o conteúdo do Google Drive.</p>
+<h2>5. Compartilhamento de dados</h2>
+<p>O aplicativo não possui servidor próprio para receber uma cópia dos seus cadastros. Os registros ficam no navegador e, quando a sincronização é ativada, são transmitidos diretamente aos serviços do Google Drive por conexões HTTPS. O funcionamento desses serviços também está sujeito às políticas de privacidade do Google.</p>
+<h2>6. Controle, exclusão e retenção</h2>
+<p>O usuário pode editar ou excluir os registros pela interface. Os dados locais podem ser removidos limpando os dados do site no navegador. O arquivo <strong>biblioteca-links.json</strong> pode ser localizado e excluído na conta Google Drive; excluir apenas dados locais não remove automaticamente o arquivo da nuvem. A exclusão de um registro pelo aplicativo é sincronizada quando existe conexão e autorização válida.</p>
+<h2>7. Segurança</h2>
+<p>As comunicações com as APIs Google utilizam HTTPS e autorização OAuth 2.0. A proteção de dispositivos, navegadores e da conta Google continua sob responsabilidade do usuário. Recomenda-se manter cópias de segurança, especialmente antes de importar dados ou realizar alterações em vários dispositivos.</p>
+<h2>8. Alterações nesta política</h2>
+<p>Esta política poderá ser atualizada para refletir mudanças no funcionamento do aplicativo. A versão mais recente será disponibilizada nesta página.</p>
+<h2>9. Contato</h2>
+<p>Para dúvidas sobre o aplicativo e esta política, entre em contato com o responsável pelo projeto através do perfil <a href="https://github.com/jfcfranco" target="_blank" rel="noopener noreferrer">jfcfranco no GitHub</a>.</p>
+</main></body></html>
