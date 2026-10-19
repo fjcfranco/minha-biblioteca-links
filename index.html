@@ -18,7 +18,7 @@
 <div class="foot"><div><span id="status" class="badge">Armazenamento local ativo</span> <span id="fileName"></span></div><div class="toolbar"><button id="btnOpenFile">Abrir arquivo JSON</button><button id="btnSaveFile">Salvar no arquivo</button><button id="btnDisconnect" class="hidden">Desvincular</button></div></div><p class="small-note">Os registros são salvos automaticamente no IndexedDB. Ao conectar o Google, são sincronizados com o Drive durante o uso, quando houver rede e autorização válida. Abrir/Salvar arquivo JSON é uma opção adicional de backup manual. Se o mesmo registro for alterado em dois dispositivos desde a última sincronização, o aplicativo pedirá para escolher a versão. Mantenha backups: não há bloqueio transacional entre dispositivos.</p>
 <input id="fileImport" class="hidden" type="file" accept=".json,application/json">
 </main>
-<dialog id="editor"><form id="recordForm"><div class="modal-head"><h2 id="modalTitle">Nova URL</h2><button class="close" type="button" id="closeModal" aria-label="Fechar">×</button></div><div class="modal-body"><div class="field"><label for="url">URL *</label><input id="url" type="url" placeholder="https://exemplo.com" required maxlength="4000"></div><div class="field"><label for="description">Descrição *</label><textarea id="description" placeholder="Sobre o que é esta página?" required maxlength="3000"></textarea></div><div class="field"><label for="tags">Tags</label><input id="tags" placeholder="moodle, desenvolvimento, documentação" maxlength="1000"><div class="hint">Separe as tags por vírgulas. Uma mesma URL pode pertencer a vários assuntos.</div></div></div><div class="modal-actions"><button type="button" id="cancelModal">Cancelar</button><button class="primary" type="submit">Salvar URL</button></div></form></dialog><dialog id="conflictDialog" aria-labelledby="conflictTitle"><div class="modal-head"><h2 id="conflictTitle">Conflito de edição ou sincronização</h2></div><div class="modal-body"><p id="conflictIntro"></p><div class="conflict-versions"><section><strong>Versão deste dispositivo</strong><pre id="conflictLocal"></pre></section><section><strong>Versão do Google Drive</strong><pre id="conflictRemote"></pre></section></div><p class="small-note">A outra versão não será aplicada. Faça um backup JSON antes de resolver conflitos importantes; não há garantia transacional entre dois navegadores gravando simultaneamente.</p></div><div class="modal-actions"><button type="button" id="conflictCancel">Adiar sincronização</button><button type="button" id="conflictRemoteChoice">Manter Drive</button><button type="button" class="primary" id="conflictLocalChoice">Manter este dispositivo</button></div></dialog><div class="toast" id="toast" role="status"></div>
+<dialog id="editor"><form id="recordForm"><div class="modal-head"><h2 id="modalTitle">Nova URL</h2><button class="close" type="button" id="closeModal" aria-label="Fechar">×</button></div><div class="modal-body"><div class="field"><label for="url">URL *</label><input id="url" type="url" placeholder="https://exemplo.com" required maxlength="4000"></div><div class="field"><label for="description">Descrição *</label><textarea id="description" placeholder="Sobre o que é esta página?" required maxlength="3000"></textarea></div><div class="field"><label for="tags">Tags</label><input id="tags" placeholder="moodle, desenvolvimento, documentação" maxlength="1000"><div class="hint">Separe as tags por vírgulas. Uma mesma URL pode pertencer a vários assuntos.</div></div></div><div class="modal-actions"><button type="button" id="cancelModal">Cancelar</button><button class="primary" type="submit">Salvar URL</button></div></form></dialog><dialog id="conflictDialog" aria-labelledby="conflictTitle"><div class="modal-head"><h2 id="conflictTitle">Conflito de edição ou sincronização</h2></div><div class="modal-body"><p id="conflictIntro"></p><div class="conflict-versions"><section><strong>Versão deste dispositivo</strong><pre id="conflictLocal"></pre></section><section><strong>Versão do Google Drive</strong><pre id="conflictRemote"></pre></section></div><p class="small-note">Nenhum backup será baixado automaticamente. Se necessário, exporte manualmente seu JSON. A sincronização não é transacional entre dispositivos.</p></div><div class="modal-actions"><button type="button" id="conflictCancel">Adiar sincronização</button><button type="button" id="conflictRemoteChoice">Manter Drive</button><button type="button" class="primary" id="conflictLocalChoice">Manter este dispositivo</button></div></dialog><div class="toast" id="toast" role="status"></div>
 <script>
 (()=>{'use strict';
 const $=s=>document.querySelector(s);let db,records=[],editing=null,fileHandle=null,dirty=false,selectedTags=new Set(),syncTimer=null,syncBusy=false,token=null,tokenExpiry=0,tokenClient=null,driveFileId=null,driveConnected=false,remoteLoaded=false,changeCounter=0;
@@ -50,22 +50,63 @@ async function importText(txt){const parsed=JSON.parse(txt);if(records.length&&!
 async function filePermission(handle,mode){const options={mode};if(await handle.queryPermission(options)==='granted')return true;return await handle.requestPermission(options)==='granted'}
 async function openFile(){if(!window.showOpenFilePicker){$('#fileImport').click();return}try{const [h]=await showOpenFilePicker({types:[{description:'Arquivo JSON',accept:{'application/json':['.json']}}],multiple:false});if(!await filePermission(h,'read'))throw Error('Permissão de leitura não concedida.');const txt=await(await h.getFile()).text();const imported=await importText(txt);if(imported)await saveHandle(h)}catch(e){if(e.name!=='AbortError')toast('Não foi possível abrir: '+e.message)}}
 async function saveFile(){if(!window.showSaveFilePicker){exportJson();return}try{let h=fileHandle;if(!h)h=await showSaveFilePicker({suggestedName:'biblioteca-links.json',types:[{description:'Arquivo JSON',accept:{'application/json':['.json']}}]});if(!await filePermission(h,'readwrite'))throw Error('Permissão de gravação não concedida.');const writable=await h.createWritable();await writable.write(payload());await writable.close();await saveHandle(h);dirty=false;updateStatus();toast('Arquivo JSON salvo. O Google Drive para computador sincronizará a pasta, se configurado.')}catch(e){if(e.name!=='AbortError')toast('Não foi possível salvar: '+e.message)}}
-$('#btnNew').onclick=()=>openEditor();$('#closeModal').onclick=$('#cancelModal').onclick=()=>{editorSnapshot=null;$('#editor').close();if(token)queueSync()};$('#recordForm').onsubmit=async e=>{e.preventDefault();try{const url=normalizeUrl($('#url').value),description=$('#description').value.trim();if(!description)throw Error('Informe a descrição.');const other=records.find(r=>!r.deletedAt&&r.url===url&&r.id!==editing);if(other&&!confirm('Esta URL já está cadastrada. Deseja manter o registro duplicado?'))return;const old=records.find(x=>x.id===editing),now=new Date().toISOString();const entry={id:editing||uid(),url,description,tags:parseTags($('#tags').value),createdAt:old?.createdAt||now,updatedAt:now};
- if(editing&&editorSnapshot&&!sameRecord(old,editorSnapshot))throw Error('O registro local mudou enquanto era editado. Reabra a edição.');
- if(editing&&token&&Date.now()<tokenExpiry){
-   const f=await getDriveFile();const remote=f?(await downloadDrive(f.id)).find(r=>r.id===editing):null;
-   if(!sameRecord(remote,editorSnapshot)){
-     const choice=await askConflict(entry,remote);
-     if(choice==='cancel'){driveMsg('Edição adiada: o registro foi alterado em outro dispositivo.');return}
-     if(choice==='remote'){
-       if(remote){await writeRecord(remote);records=records.filter(x=>x.id!==remote.id).concat(remote);}
-       else {await tx(STORE,'readwrite',st=>st.delete(editing));records=records.filter(x=>x.id!==editing)}
-       $('#editor').close();editorSnapshot=null;render();toast('Versão do Drive mantida.');queueSync();return;
-     }
-     conflictOverrides.set(editing,remote?recordContent(remote):null);
+$('#btnNew').onclick=()=>openEditor();
+let savingEditor=false;
+$('#editor').addEventListener('cancel',e=>{if(savingEditor)e.preventDefault()});
+$('#closeModal').onclick=$('#cancelModal').onclick=()=>{if(savingEditor)return;editorSnapshot=null;$('#editor').close();if(token)queueSync()};
+$('#recordForm').onsubmit=async e=>{
+ e.preventDefault();if(savingEditor)return;
+ const submit=$('#recordForm button[type=submit]');savingEditor=true;submit.disabled=true;submit.textContent='Verificando alterações...';
+ try{
+  const url=normalizeUrl($('#url').value),description=$('#description').value.trim();
+  if(!description)throw Error('Informe a descrição.');
+  const other=records.find(r=>!r.deletedAt&&r.url===url&&r.id!==editing);
+  if(other&&!confirm('Esta URL já está cadastrada. Deseja manter o registro duplicado?'))return;
+  if(syncBusy)throw Error('Aguarde a sincronização em andamento e tente salvar novamente.');
+  const old=records.find(x=>x.id===editing),now=new Date().toISOString();
+  const entry={id:editing||uid(),url,description,tags:parseTags($('#tags').value),createdAt:old?.createdAt||now,updatedAt:now};
+  if(editing&&editorSnapshot&&!sameRecord(old,editorSnapshot))throw Error('O registro local mudou enquanto era editado. Reabra a edição.');
+  // Sem token, edição local explícita com aviso de sincronização pendente.
+  if(!token||Date.now()>=tokenExpiry){
+   await writeRecord(entry);records=records.filter(x=>x.id!==entry.id).concat(entry);
+   $('#editor').close();editorSnapshot=null;markDirty();render();
+   toast('URL salva localmente. Sincronização com Drive pendente.');return;
+  }
+  // Operação de salvamento coordenada: comparar, conciliar e enviar ANTES de indicar sucesso.
+  clearTimeout(syncTimer);syncBusy=true;driveButtons();driveMsg('Verificando alterações no Drive antes de salvar...');
+  const f=await getDriveFile();const remote=f?await downloadDrive(f.id):[];
+  const merged=await reconcile(records.filter(r=>r.id!==editing),remote.filter(r=>r.id!==editing),syncBaseline?.filter(r=>r.id!==editing)||null);
+  // Mesmo que a base anterior fosse antiga, o editor compara com a versão vista ao abrir.
+  const remoteEdit=remote.find(r=>r.id===editing)||null;
+  if(editing&&!sameRecord(remoteEdit,editorSnapshot)){
+   const choice=await askConflict(entry,remoteEdit);
+   if(choice==='cancel'){
+    driveMsg('Edição não aplicada: conflito ainda pendente.');return;
    }
- }
- await writeRecord(entry);records=records.filter(x=>x.id!==entry.id).concat(entry);$('#editor').close();editorSnapshot=null;markDirty();render();toast(editing?'URL atualizada.':'URL cadastrada.')}catch(err){toast(err.message)}};
+   if(choice==='remote'){
+    // Mantém a cópia remota da URL e descarta SOMENTE a edição deste formulário.
+    const keep=merged.filter(r=>r.id!==editing);
+    if(remoteEdit)keep.push(remoteEdit);
+    if(f){const check=await downloadDrive(f.id);if(!sameCollection(remote,check))throw Error('O Drive mudou durante a escolha. Tente novamente.');}
+    // Não marca a edição deste formulário como salva. Outras diferenças serão sincronizadas depois.
+    await tx(STORE,'readwrite',store=>{store.clear();keep.forEach(r=>store.put(r))});
+    records=keep;$('#editor').close();editorSnapshot=null;markDirty();render();
+    toast('Edição descartada. Versão do Drive mantida.');return;
+   }
+  }
+  const result=merged.filter(r=>r.id!==entry.id).concat(entry);
+  // Releitura imediatamente antes do PATCH reduz sobrescrita acidental (não é transacional).
+  if(f){const check=await downloadDrive(f.id);if(!sameCollection(remote,check))throw Error('O Drive mudou durante a edição. Nenhuma alteração foi salva. Tente novamente.');}
+  submit.textContent='Salvando no Drive...';
+  await uploadDrive(f?.id||null,result);
+  await tx(STORE,'readwrite',store=>{store.clear();result.forEach(r=>store.put(r))});
+  records=result;await storeBaseline(result);conflictOverrides.clear();dirty=false;remoteLoaded=true;
+  $('#editor').close();editorSnapshot=null;render();
+  driveMsg('Alteração gravada no Google Drive em '+new Date().toLocaleString('pt-BR')+'.');
+  toast(editing?'URL atualizada e sincronizada.':'URL cadastrada e sincronizada.');
+ }catch(err){console.error('Falha ao salvar URL:',err);driveMsg('Salvamento não confirmado: '+err.message);toast('Não foi possível concluir: '+err.message)}
+ finally{savingEditor=false;submit.disabled=false;submit.textContent='Salvar URL';syncBusy=false;driveButtons()}
+};
 $('#list').onclick=async e=>{const chip=e.target.closest('[data-filter]');if(chip){if(selectedTags.has(chip.dataset.filter))selectedTags.delete(chip.dataset.filter);else selectedTags.add(chip.dataset.filter);render();return}const edit=e.target.closest('[data-edit]');if(edit){openEditor(edit.dataset.edit);return}const del=e.target.closest('[data-delete]');if(del&&confirm('Excluir esta URL do cadastro?')){try{const tombstone=await deleteRecord(del.dataset.delete);records=records.map(x=>x.id===tombstone.id?tombstone:x);markDirty();render();toast('URL excluída. A exclusão será sincronizada com o Drive.')}catch(err){console.error('Falha ao excluir URL:',err);toast('Não foi possível excluir: '+err.message)}}};
 $('#search').oninput=render;$('#clearTags').onclick=()=>{selectedTags.clear();render()};$('#matchAll').onchange=render;$('#sort').onchange=render;$('#btnExport').onclick=exportJson;$('#btnImport').onclick=()=>$('#fileImport').click();$('#fileImport').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await importText(await f.text());if(fileHandle)await saveHandle(null)}catch(err){toast('Falha na importação: '+err.message)}e.target.value=''};$('#btnOpenFile').onclick=openFile;$('#btnSaveFile').onclick=saveFile;$('#btnDisconnect').onclick=()=>saveHandle(null).then(()=>toast('Arquivo desvinculado. Os dados locais continuam disponíveis.'));
 // Sincronização Google Drive (OAuth token client + API REST; sem backend).
@@ -86,14 +127,14 @@ function sameCollection(a,b){const aa=[...a].sort((x,y)=>x.id.localeCompare(y.id
 function makeBackup(list,label){const a=document.createElement('a');const url=URL.createObjectURL(new Blob([JSON.stringify({format:'biblioteca-links',version:2,exportedAt:new Date().toISOString(),records:list},null,2)],{type:'application/json'}));a.href=url;a.download='biblioteca-links-backup-'+label+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}
 function recordSummary(r){return r?['URL: '+r.url,'Descrição: '+r.description,'Tags: '+(r.tags||[]).join(', '),'Situação: '+(r.deletedAt?'EXCLUÍDA':'Ativa'),'Alteração: '+(r.updatedAt||'desconhecida')].join('\n'):'Registro ausente'}
 function askConflict(local,remote){return new Promise(resolve=>{const dialog=$('#conflictDialog');$('#conflictIntro').textContent='O registro '+(local?.description||remote?.description||local?.url||remote?.url||'')+' foi modificado em ambos os dispositivos.';$('#conflictLocal').textContent=recordSummary(local);$('#conflictRemote').textContent=recordSummary(remote);let done=false;const finish=v=>{if(done)return;done=true;dialog.close();resolve(v)};$('#conflictLocalChoice').onclick=()=>finish('local');$('#conflictRemoteChoice').onclick=()=>finish('remote');$('#conflictCancel').onclick=()=>finish('cancel');dialog.oncancel=e=>{e.preventDefault();finish('cancel')};dialog.showModal()})}
-async function reconcile(local,remote,base){const localMap=new Map(local.map(r=>[r.id,r])),remoteMap=new Map(remote.map(r=>[r.id,r])),baseMap=new Map((base||[]).map(r=>[r.id,r]));const result=[];let backedUp=false;for(const id of new Set([...localMap.keys(),...remoteMap.keys(),...baseMap.keys()])){const l=localMap.get(id),r=remoteMap.get(id),b=baseMap.get(id);let chosen;
+async function reconcile(local,remote,base){const localMap=new Map(local.map(r=>[r.id,r])),remoteMap=new Map(remote.map(r=>[r.id,r])),baseMap=new Map((base||[]).map(r=>[r.id,r]));const result=[];for(const id of new Set([...localMap.keys(),...remoteMap.keys(),...baseMap.keys()])){const l=localMap.get(id),r=remoteMap.get(id),b=baseMap.get(id);let chosen;
  if(sameRecord(l,r))chosen=l||r;
  else if(base){const changedL=!sameRecord(l,b),changedR=!sameRecord(r,b);if(changedL&&!changedR)chosen=l;else if(changedR&&!changedL)chosen=r;else if(!changedL&&!changedR)chosen=l||r;}
  // Sem referência anterior, registros homônimos divergentes também são conflitos.
  if(chosen===undefined&&l&&!r&&!b)chosen=l;
  if(chosen===undefined&&r&&!l&&!b)chosen=r;
  if(chosen===undefined&&conflictOverrides.has(id)&&conflictOverrides.get(id)===recordContent(r)){chosen=l;}
- if(chosen===undefined){if(!backedUp){makeBackup(local,'local');makeBackup(remote,'drive');backedUp=true}const choice=await askConflict(l,r);if(choice==='cancel')throw Error('Sincronização adiada: escolha uma versão para resolver o conflito.');chosen=choice==='local'?l:r}
+ if(chosen===undefined){const choice=await askConflict(l,r);if(choice==='cancel')throw Error('Sincronização adiada: escolha uma versão para resolver o conflito.');chosen=choice==='local'?l:r}
  if(chosen)result.push(chosen)}return result}
 async function storeBaseline(list){await tx('settings','readwrite',s=>s.put(list,BASELINE_KEY));syncBaseline=structuredClone(list)}
 async function syncDrive(){if(syncBusy||!token)return;if($('#editor').open){driveMsg('Edição aberta: sincronização aguardando o formulário ser fechado.');return;}if(!navigator.onLine)throw Error('Sem internet. Os dados permanecem no navegador.');syncBusy=true;const startCounter=changeCounter;driveButtons();driveMsg('Comparando alterações locais e remotas...');try{const f=await getDriveFile();let remote=f?await downloadDrive(f.id):[];if(changeCounter!==startCounter)throw Error('Cadastro local alterado durante a leitura. Tente novamente.');let merged=await reconcile(records,remote,syncBaseline);if(changeCounter!==startCounter||$('#editor').open)throw Error('Cadastro em edição durante a resolução. Sincronize novamente.');
