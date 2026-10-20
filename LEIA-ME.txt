@@ -1,0 +1,14 @@
+Minha Biblioteca de Links v3.4 — PWA
+
+Envie TODOS os arquivos deste pacote à raiz do repositório GitHub Pages (substitua index.html e preserve a mesma estrutura).
+
+Arquivos: index.html, privacidade.html, manifest.webmanifest, sw.js, icon-192.png, icon-512.png e icon-maskable-512.png.
+
+Instalação:
+- Android/Chrome: menu do navegador > Instalar app ou Adicionar à tela inicial.
+- Computador/Chrome/Edge: opção Instalar na barra de endereços ou menu.
+- iPhone/Safari: Compartilhar > Adicionar à Tela de Início (quando disponível).
+
+A interface e os registros já gravados no IndexedDB poderão ser acessados offline depois do primeiro carregamento bem-sucedido. A autenticação e a sincronização com o Google Drive precisam de Internet e de um token OAuth válido.
+
+Ao testar, confirme que a política de privacidade continua publicada, que a aplicação carrega e que o PWA aparece como instalável. Não desinstale nem limpe dados do navegador sem backup; IndexedDB pode ser apagado ao remover dados do site.
