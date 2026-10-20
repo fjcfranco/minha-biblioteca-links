@@ -12,3 +12,5 @@ Instalação:
 A interface e os registros já gravados no IndexedDB poderão ser acessados offline depois do primeiro carregamento bem-sucedido. A autenticação e a sincronização com o Google Drive precisam de Internet e de um token OAuth válido.
 
 Ao testar, confirme que a política de privacidade continua publicada, que a aplicação carrega e que o PWA aparece como instalável. Não desinstale nem limpe dados do navegador sem backup; IndexedDB pode ser apagado ao remover dados do site.
+
+Versão 3.4.1: opção de preservar token de curta duração no dispositivo. É uma opção local, revogável, e não mantém sessão após a expiração.
