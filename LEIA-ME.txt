@@ -14,3 +14,5 @@ A interface e os registros já gravados no IndexedDB poderão ser acessados offl
 Ao testar, confirme que a política de privacidade continua publicada, que a aplicação carrega e que o PWA aparece como instalável. Não desinstale nem limpe dados do navegador sem backup; IndexedDB pode ser apagado ao remover dados do site.
 
 Versão 3.4.1: opção de preservar token de curta duração no dispositivo. É uma opção local, revogável, e não mantém sessão após a expiração.
+
+Versão 3.4.2: consulta rápida de version do Drive antes de baixar o JSON. Não garante escrita transacional.

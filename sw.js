@@ -1,5 +1,5 @@
-// PWA v3.4.1: shell cache only. No Google auth tokens or Drive API responses cached.
-const CACHE = 'biblioteca-links-shell-v3.4.1';
+// PWA v3.4.2: shell cache only. No Google auth tokens or Drive API responses cached.
+const CACHE = 'biblioteca-links-shell-v3.4.2';
 const SHELL = ['./', './index.html', './privacidade.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
